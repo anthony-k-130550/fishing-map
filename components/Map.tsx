@@ -3,12 +3,15 @@
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css'; // import styles
+import { useState } from 'react';
 
 type Spot = {
     id: string;
     name: string;
     latitude: number;
     longitude: number;
+    description?: string;
+    fishType?: string;
 }
 
 type MapProps = {
@@ -18,6 +21,7 @@ type MapProps = {
 export default function Map({ spots }: MapProps) {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<maplibregl.Map | null>(null);
+    const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
 
     useEffect(() => {
         if (!mapContainer.current) return;
@@ -44,20 +48,51 @@ export default function Map({ spots }: MapProps) {
         container.querySelectorAll('.marker').forEach((marker) => marker.remove());
 
         spots.forEach((spot) => {
-            const popup = new maplibregl.Popup({ offset: 25 }).setText(spot.name);
-
             const marker = new maplibregl.Marker({className: 'marker'})
                 .setLngLat([spot.longitude, spot.latitude])
-                .setPopup(popup)
                 .addTo(mapInstance.current!);
+
+            marker.getElement().addEventListener('click', () => {
+                setSelectedSpot(spot);
+            });
         });
     }, [spots]);
 
     return (
-        <div
+        <div className="relative">
+            {/* Map container */}
+            <div
             ref={mapContainer}
             className="shadow-lg"
             style={{ height: '500px', width: '100%', borderRadius: '8px' }}
-        />
-    );
+            />
+
+            {/* Modal overlay when a spot is selected */}
+            {selectedSpot && (
+            <div className="fixed inset-0 backdrop-blur-xs flex items-center justify-center z-50">
+                <div className="bg-white rounded-xl p-6 shadow-2xl w-[90%] max-w-md relative">
+                <button
+                    onClick={() => setSelectedSpot(null)}
+                    className="absolute top-2 right-2 text-gray-500 hover:text-black text-lg"
+                >
+                    &times;
+                </button>
+                <h2 className="text-2xl font-bold mb-2">{selectedSpot.name}</h2>
+                <p className="text-gray-600 mb-1">
+                    <strong>Latitude:</strong> {selectedSpot.latitude}
+                </p>
+                <p className="text-gray-600 mb-1">
+                    <strong>Longitude:</strong> {selectedSpot.longitude}
+                </p>
+                <p className="text-gray-600 mb-1">
+                    <strong>Description:</strong> {selectedSpot.description || 'N/A'}
+                </p>
+                <p className="text-gray-600">
+                    <strong>Fish type:</strong> {selectedSpot.fishType || 'Unknown'}
+                </p>
+                </div>
+            </div>
+            )}
+        </div>
+        );
     }

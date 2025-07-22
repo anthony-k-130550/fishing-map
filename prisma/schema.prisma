@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Spot {
+  id        Int    @id @default(autoincrement())
+  name      String @unique
+  latitude  Float
+  longitude Float
+  fishType  FishType[] @relation("SpotFishTypes")
+  description String?
+}
+
+model FishType {
+  id Int @id @default(autoincrement())
+  name String @unique
+  spots Spot[] @relation("SpotFishTypes")
+}
