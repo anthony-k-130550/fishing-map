@@ -37,7 +37,7 @@ export default function HomePage() {
         </Link>
         
         <Link
-          href="/"
+          href="/catalogue"
           className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center min-w-[200px]"
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
