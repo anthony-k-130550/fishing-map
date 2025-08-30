@@ -25,9 +25,10 @@ export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [fishTypes, setFishTypes] = useState<FishType[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false);
   const locationFormRef = useRef<HTMLFormElement>(null);
   const filterFormRef = useRef<HTMLFormElement>(null);
-  const [isFiltering, setIsFiltering] = useState(false);
+  const [newFishType, setNewFishType] = useState('');
 
   // Fetch the spots from the API so the page knows what spots to display
   useEffect(() => {
@@ -60,43 +61,110 @@ export default function Home() {
       fishTypeIds: selectedFishTypeIds,
     };
     
-    try {
-      const response = await fetch('/api/spots', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(spotData),
-      });
-      
-      if (response.ok) {
-        const newSpot = await response.json();
-        setSpots([...spots, newSpot]);
-        setShowAddForm(false);
-        // Reset form safely using ref
-        if (locationFormRef.current) {
-          locationFormRef.current.reset();
-        }
-      } else {
-        const errorData = await response.json();
-        console.error('Error adding spot:', errorData.error);
+    {/* need to add something to check the forms, if I want to improve in the future make a visible error instead of just console log */}
+    if (spotData.latitude < -90 || spotData.latitude > 90 || spotData.longitude < -180 || spotData.longitude > 180) {
+      if (locationFormRef.current) {
+        locationFormRef.current.reset();
       }
-    } catch (error) {
-      console.error('Error adding spot:', error);
+      console.error('Failed to add spot, please keep longitude and latitude within the proper bounds');
+      setIsSubmitting(false);
+      setShowAddForm(false);
+    } else {
+        try {
+          const response = await fetch('/api/spots', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(spotData),
+          });
+          
+          if (response.ok) {
+            const newSpot = await response.json();
+            setSpots([...spots, newSpot]);
+            setShowAddForm(false);
+            // Reset form safely using ref
+            if (locationFormRef.current) {
+              locationFormRef.current.reset();
+            }
+          } else {
+            const errorData = await response.json();
+            console.error('Error adding spot:', errorData.error);
+          }
+        } catch (error) {
+          console.error('Error adding spot:', error);
+        } finally {
+          setIsSubmitting(false);
+        }
+    }
+  };
+
+  const handleFilter = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true); {/* I may need to make a new one, but might not since the other modal wouldn't open up at this time anyways */}
+
+    const formData = new FormData(e.currentTarget);
+
+    const minLat = parseFloat(formData.get("minLatitude") as string);
+    const maxLat = parseFloat(formData.get("maxLatitude") as string);
+
+    const minLong = parseFloat(formData.get("minLongitude") as string);
+    const maxLong = parseFloat(formData.get("maxLongitude") as string);
+
+    const filteredFishTypeIDs = Array.from(formData.getAll('filterFishType')).map(id => parseInt(id as string));
+
+    try {
+      const query = new URLSearchParams({
+        minLat: String(minLat),
+        maxLat: String(maxLat),
+        minLong: String(minLong),
+        maxLong: String(maxLong),
+        filteredFishIDs: JSON.stringify(filteredFishTypeIDs),
+      });
+
+      const response = await fetch(`/api/filter?${query.toString()}`); {/* Question what does this do ALSO TODO */}
+      if (!response.ok) throw new Error("filtering failed");
+
+      const filteredSpots = await response.json();
+      setSpots(filteredSpots);
+      setIsFiltering(false);
+
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFilter = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFishAddition = async () => {
+    if (!newFishType.trim()) return;
 
+    try {
+      const response = await fetch('/api/fish-types', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name: newFishType}),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Could not add fish type', errorData.error);
+        return;
+      }
+
+      const createdFishType = await response.json();
+      setFishTypes([...fishTypes, createdFishType]);
+      setNewFishType("");
+    } catch (error) {
+      console.error('Error adding fish type:', error);
+    }
   };
   
   return (
     <main className="p-6">
       {/* Header with title and navigation buttons */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Fishing Spots in America</h1>
+        <h1 className="text-3xl font-bold">My Fishing Spots</h1>
         
         <div className="flex items-center space-x-3">
           <Link
@@ -131,7 +199,7 @@ export default function Home() {
       {/* Add Location Form Modal */}
       {showAddForm && (
         <div className="fixed inset-0 backdrop-blur-xs flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 shadow-2xl max-w-md relative">
+          <div className="bg-white rounded-xl p-6 shadow-2xl w-full max-w-md relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowAddForm(false)}
               className="absolute top-2 right-2 text-gray-500 hover:text-black text-lg"
@@ -206,7 +274,7 @@ export default function Home() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Fish Types
                 </label>
-                <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                <div className="max-h-25 overflow-y-auto border border-gray-200 rounded-lg p-2">
                   {fishTypes.map((fishType) => (
                     <label key={fishType.id} className="flex items-center space-x-2 py-1">
                       <input
@@ -219,6 +287,26 @@ export default function Home() {
                     </label>
                   ))}
                 </div>
+              </div>
+
+              {/* add new fish types */}
+              <div className='flex items-center justify-evenly gap-2'>
+                <input
+                id="newFishType"
+                name="newFishType"
+                value={newFishType}
+                onChange={(e) => setNewFishType(e.target.value)}
+                className="w-[500px] px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter the fish type"
+                />
+
+                <button type='button' 
+                onClick={() => {
+                  handleFishAddition();
+                }}
+                className="flex-1 px-4 py-2 bg-green-500 text-black rounded-lg hover:bg-green-400 transition-colors disabled:opacity-50">
+                  Add
+                </button>
               </div>
               
               <div className="flex space-x-3 pt-4">
@@ -253,10 +341,14 @@ export default function Home() {
               </button>
               <h1 className="block text-lg font-bold text-black-900 mb-1">Filters</h1>
               <form ref={filterFormRef} className="space-y-4" onSubmit={handleFilter}>
+
+                {/* latitude chunk */}
                 <div className="flex justify-evenly items-center">
-                  <label htmlFor="latitude" className="block text-md font-medium text-gray-700 mb-1">
-                      Latitude
-                  </label>
+                  <div className="w-[75px]">
+                    <label htmlFor="latitude" className="block text-md font-medium text-gray-700 mb-1">
+                        Latitude
+                    </label>
+                  </div>
                   <input
                     type="number"
                     id="minLatitude"
@@ -276,6 +368,49 @@ export default function Home() {
                     placeholder="max latitude"
                   />  
                 </div>
+
+                {/* longitude chunk */}
+                <div className="flex justify-evenly items-center">
+                  <div className="w-[75px]">
+                    <label htmlFor="latitude" className="block text-md font-medium text-gray-700 mb-1">
+                        Longitude
+                    </label>
+                  </div>
+                  <input
+                    type="number"
+                    id="minLongitude"
+                    name="minLongitude"
+                    required
+                    step="any"
+                    className="w-[150px] px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="min longitude"
+                  />
+                  <input
+                    type="number"
+                    id="maxLongitude"
+                    name="maxLongitude"
+                    required
+                    step="any"
+                    className="w-[150px] px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="max longitude"
+                  />  
+                </div>
+
+                <div className="max-h-25 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                  {fishTypes.map((fishType) => (
+                    <label key={fishType.id} className="flex items-center space-x-2 py-1">
+                      <input
+                        type="checkbox"
+                        name="filterFishType"
+                        value={fishType.id}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{fishType.name}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/*bottom buttons chunk*/}
                 <div className="flex space-x-3 pt-4">
                   <button
                     type="button"
@@ -291,7 +426,7 @@ export default function Home() {
                   >
                     {isSubmitting ? 'Filtering..' : 'Filter'}
                   </button>
-              </div>
+                </div>
               </form>
           </div>
         </div>

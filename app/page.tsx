@@ -20,7 +20,7 @@ export default function HomePage() {
           </h1>
         </div>
         <p className="text-xl text-black-600 max-w-md mx-auto">
-          Discover the best fishing spots across America with our interactive map
+          Use this map to save all your fishing locations in one place.
         </p>
       </div>
 

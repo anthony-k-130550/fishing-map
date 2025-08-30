@@ -24,11 +24,11 @@ async function main() {
 
   await prisma.spot.createMany({
     data: [
-      { name: 'Lake Tahoe', latitude: 39.0968, longitude: -120.0324, description: 'Beautiful lake in California.' },
+      { name: 'Lake Tahoe', latitude: 39.0968, longitude: -120.0324, description: 'california lake.' },
       { name: 'Florida Keys', latitude: 24.5551, longitude: -81.7800, description: 'Tropical fishing paradise.' },
-      { name: 'Lake Erie', latitude: 42.2097, longitude: -82.9378, description: 'Popular for bass and walleye.' },
-      { name: 'Lake Superior', latitude: 47.7000, longitude: -87.5000, description: 'Largest of the Great Lakes, known for cold-water fish.' },
-      { name: 'Lake Michigan', latitude: 44.0000, longitude: -87.0000, description: 'Popular freshwater lake with diverse fish species.' },
+      { name: 'Lake Erie', latitude: 42.2097, longitude: -82.9378, description: 'one of the great lakes.' },
+      { name: 'Lake Superior', latitude: 47.7000, longitude: -87.5000, description: 'largest of the great lakes.' },
+      { name: 'Lake Michigan', latitude: 44.0000, longitude: -87.0000, description: 'good location for its diverse species of fish.' },
     ],
   });
 
